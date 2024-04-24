@@ -26,7 +26,7 @@ engine = create_engine("mysql+pymysql://{user}:{pw}@localhost/{db}".format(user=
 
 
 
-##################===========================================================
+#=============================================================================
 #Main function to define the Streamlit app
 
 st.set_page_config(page_title='Welcome to my Streamlit app', page_icon=':bar_chart:', layout="wide")
