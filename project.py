@@ -26,7 +26,7 @@ engine = create_engine("mysql+pymysql://{user}:{pw}@localhost/{db}".format(user=
 
 
 
-#=============================================================================
+##################===========================================================
 #Main function to define the Streamlit app
 
 st.set_page_config(page_title='Welcome to my Streamlit app', page_icon=':bar_chart:', layout="wide")
@@ -42,10 +42,11 @@ st.title('Data Collection Zone')
 st.write('(Hint: This zone collects data by using channel IDs through the YouTube API Key)')
 channel_id = st.text_input('ENTER CHANNEL ID')
 
-if st.button("Extract Data"):
+st.button("Extract Data")
     
     
 #fetch channel details through channel_id
+def retrive_data_API(channel_id):
     def channel_info(youtube, channel_id):
     
         channel_details = []
@@ -193,30 +194,25 @@ if st.button("Extract Data"):
     comment_data=comment_info(youtube,video_ids)
     comment_df=pd.DataFrame(comment_data)
     
-
-
-
-
-
+    return channel_df,video_df,comment_df
 
 
 #====================================================================================
 
 
-
 # Function to create table in MySQL
 def create_table_in_mysql(engine):
     conn = engine.raw_connection()
-    
-    #scursor = conn.cursor()
-    mycursor.execute('''CREATE TABLE IF NOT EXISTS capstonepro_1.channel (
+    cursor = conn.cursor()
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS capstonepro_1.channel (
                      channel_ID VARCHAR(255),
                      channel_name TEXT,
                      channel_description TEXT,
                      channel_viewcount BIGINT,
                      channel_videocount BIGINT,
                      channel_subscribercount BIGINT)''')
-    mycursor.execute('''CREATE TABLE IF NOT EXISTS capstonepro_1.video (
+    cursor.execute('''CREATE TABLE IF NOT EXISTS capstonepro_1.video (
                      video_id VARCHAR(255),
                      channel_title TEXT,
                      channel_description TEXT,
@@ -230,7 +226,7 @@ def create_table_in_mysql(engine):
                      video_viewcount BIGINT,
                      video_thumbnail TEXT,
                      caption_status TEXT)''')
-    mycursor.execute('''CREATE TABLE IF NOT EXISTS capstonepro_1.comment(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS capstonepro_1.comment(
                      comment_id VARCHAR(255),
                      channel_ID VARCHAR(255),
                      video_ID VARCHAR(255),
@@ -240,11 +236,8 @@ def create_table_in_mysql(engine):
                      comments_publishedtime VARCHAR(255),
                      comments_likecount BIGINT,
                      comment_replycount BIGINT)''')
-    mydb.commit()
-   # cursor.close()
     conn.commit()
-   # conn.close()
-
+    cursor.close()
 
 # Function to insert data into MySQL
 def insert_data(engine, channel_df, video_df, comment_df):
@@ -258,36 +251,59 @@ def insert_data(engine, channel_df, video_df, comment_df):
     comment_df.to_sql('comment', con=engine, if_exists="append", index=False)
 
     conn.commit()
-    #cursor.close()
-    #conn.close()
-
+    cursor.close()
 
 # Establish connection to MySQL database
 def connect_to_database():
-   
-    engine = create_engine("mysql+pymysql://{user}:{pw}@localhost/{db}".format(user="root",pw="",db="capstonepro_1"))
+    engine = create_engine("mysql+pymysql://{user}:{pw}@localhost/{db}".format(user="root", pw="", db="capstonepro_1"))
     return engine
 
 # Function to handle data migration zone
 st.title('DATA MIGRATION ZONE')
-st.write('(Hint: This zone migrate data to SQL data warehouse)')
+st.write('(Hint: This zone migrates data to SQL data warehouse)')
 
-    # Connect to MySQL database
+# Connect to MySQL database
 engine = connect_to_database()
 
-    # Create table
+# Create table
 create_table_in_mysql(engine)
 
-    # Insert data into table
-#insert_data(engine,channel_df,video_df,comment_df)
+# Function to check if channel ID already exists in the database
+def check_channel_id_indatabase(engine, channel_id):
+    conn = engine.raw_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM capstonepro_1.channel WHERE channel_ID = %s", (channel_id,))
+    result = cursor.fetchone()
+    cursor.close()
+    if result:
+        return True
+    else:
+        return False
 
+# Function to handle data migration
+# Function to handle data migration
+def handle_data_migration(channel_id):
+    if channel_id:
+        if check_channel_id_indatabase(engine, channel_id):
+            st.warning("This channel ID is already stored in the database. Please enter another channel ID.", icon="⚠️")
+        else:
+            # Retrieve data from YouTube API
+            channel_df, video_df, comment_df = retrive_data_API(channel_id)
+            
+            # Insert data into MySQL
+            insert_data(engine, channel_df, video_df, comment_df)
+            with st.spinner('Wait for it...'):
+                time.sleep(5)
+            st.success('Data migrated successfully!')
+    else:
+        st.warning("Please enter a valid channel ID.", icon="⚠️")
 
+# Toggle button to trigger data migration
 on = st.toggle('SCRAPE AND INSERT DATA')
 
 if on:
-    insert_data(engine,channel_df,video_df,comment_df)
-    st.write('Data Migrated successfully!')
 
+    handle_data_migration(channel_id)
 #function to handle data Analysis zone
 def execute_selected_query(option):
     #mycursor = conn.cursor()
