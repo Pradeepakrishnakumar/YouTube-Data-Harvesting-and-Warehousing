@@ -333,10 +333,11 @@ def execute_selected_query(option):
                 FROM capstonepro_1.video v
                 JOIN capstonepro_1.channel c ON v.channel_title = c.channel_name
                 ORDER BY v.video_viewcount DESC
-                LIMIT 10"""
+                LIMIT 10;
+                """
         mycursor.execute(query)
         results=mycursor.fetchall()
-        df=pd.DataFrame(results, columns=['channel_name','video_Viewcount'])
+        df=pd.DataFrame(results, columns=['video_title','channel_name','video_Viewcount'])
         st.write(df)
     elif option == "4. How many comments were made on each video, and what are their corresponding video names?":
         query="""
@@ -387,7 +388,7 @@ def execute_selected_query(option):
                 """
         mycursor.execute(query)
         results=mycursor.fetchall()
-        df=pd.DataFrame(results, columns=['channel_title','Total_views'])
+        df=pd.DataFrame(results, columns=['channel_title'])
         st.write(df)
     elif option == "9. what is the average duration of all videos in each channel and what are their corresponding channel names?":
         query="""
@@ -401,11 +402,13 @@ def execute_selected_query(option):
         st.write(df)
     elif option == "10. Which videos have the highest number of comments, and what are their corresponding channel names?":
         query="""
-                SELECT v.video_title, c.channel_name, COUNT(c.comment_id) AS comment_count
-                FROM capstonepro_1.video AS v
-                JOIN capstonepro_1.comment AS c ON v.video_id = c.video_ID
-                GROUP BY v.video_title, c.channel_name
-                ORDER BY comment_count DESC;
+                SELECT v.video_title, ch.channel_name, COUNT(*) AS comment_count
+                FROM capstonepro_1.video v
+                JOIN capstonepro_1.comment c ON v.video_id = c.video_ID
+                JOIN capstonepro_1.channel ch ON v.channel_title = ch.channel_name
+                GROUP BY v.video_title, ch.channel_name
+                ORDER BY comment_count DESC
+                LIMIT 5;
                 """
         mycursor.execute(query)
         results=mycursor.fetchall()
@@ -432,7 +435,6 @@ option=st.selectbox(
 )
 if st.button("Execute Query"):
     execute_selected_query(option)
-
 
 
 
